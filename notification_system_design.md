@@ -284,3 +284,75 @@ Fetching all notifications on every page load causes repeated heavy database que
 - Cache invalidation required after deployments
 - Additional complexity in deployment pipeline
 - May require DNS configuration changes
+
+---
+
+## Bulk Notification System
+
+### Problems with Naive Sequential Approach
+
+- **Sending one by one is slow** for thousands of students. Sequential processing cannot scale beyond a few hundred notifications.
+- **No retry mechanism.** If one notification fails to send, the entire process stops, leaving some students without notifications.
+- **Tightly coupled systems.** If the email service is down, the database write is also blocked, creating a cascading failure.
+- **Not scalable beyond a few hundred concurrent notifications.** The request handler blocks waiting for each notification to complete.
+
+### Redesigned Approach Using Message Queue
+
+**Architecture:**
+1. **Step 1:** Save the notification record to the database first
+2. **Step 2:** Push an email job into a message queue (RabbitMQ or Kafka)
+3. **Step 3:** Asynchronous worker process picks up jobs from the queue
+4. **Step 4:** Worker sends the email; on failure, retries up to 3 times
+5. **Step 5:** Failed jobs after max retries go to a dead-letter queue for manual review
+
+### Pseudocode
+
+```javascript
+function sendBulkNotifications(studentList, message) {
+  for (let student of studentList) {
+    // Save to database first
+    saveNotificationToDB(student.id, message);
+    
+    // Push job to message queue
+    queue.push({
+      student_id: student.id,
+      message: message,
+      retry_count: 0
+    });
+  }
+  return { status: 'queued', count: studentList.length };
+}
+
+worker.on('job', async (job) => {
+  try {
+    // Attempt to send email
+    await sendEmail(job.student_id, job.message);
+    console.log(`Email sent to student ${job.student_id}`);
+  } catch (err) {
+    // Handle retry logic
+    if (job.retry_count < 3) {
+      job.retry_count++;
+      queue.push(job); // Retry
+    } else {
+      // Max retries exceeded
+      deadLetterQueue.push({
+        job: job,
+        error: err.message,
+        timestamp: new Date()
+      });
+    }
+  }
+});
+```
+
+### Tool Selection
+
+- **RabbitMQ:** Recommended for smaller to medium-scale systems. Easier to set up and manage. Good for < 10,000 notifications per day.
+- **Kafka:** Recommended for high-throughput systems. Better for > 100,000 notifications per day. Provides built-in partitioning and replication for fault tolerance.
+
+### Benefits
+
+- **Decoupled architecture:** Database writes complete immediately; email sending happens asynchronously.
+- **Fault tolerance:** Failed notifications are retried automatically; manual intervention only needed after max retries.
+- **Scalability:** Multiple workers can process jobs in parallel, handling thousands of notifications concurrently.
+- **Reliability:** Message queue ensures no jobs are lost; persistence layer protects against worker crashes.
