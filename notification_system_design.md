@@ -114,3 +114,45 @@ Authorization: Bearer <token>
 ## Real-time Mechanism
 
 Use WebSockets or Server-Sent Events (SSE) to push new notifications to connected clients without polling. This ensures that users receive notifications instantly as they are created, improving the user experience and reducing server load by eliminating the need for continuous polling requests.
+
+---
+
+## Database Design
+
+**Database Choice:** PostgreSQL
+
+**Reason:** PostgreSQL is chosen for this system because it provides relational data structure, ACID compliance, strong indexing capabilities, and reliability for structured student notification records. It ensures data integrity and query performance for large-scale notification systems.
+
+### Notifications Table Schema
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | SERIAL PK | auto-increment primary key |
+| student_id | INTEGER | references students table |
+| type | VARCHAR | Placement / Result / Event |
+| message | TEXT | notification content |
+| is_read | BOOLEAN | default false |
+| created_at | TIMESTAMP | default NOW() |
+
+---
+
+## Scaling Concerns
+
+- **Large table scans slow down** as rows grow into millions. Without proper indexing, querying can become prohibitively slow.
+- **Fetching unread notifications without indexes causes full scans.** This is a common operation that must be optimized.
+- **Pagination is essential** to avoid loading all rows at once. Sending millions of records to the client degrades performance.
+- **Indexes must be added** on frequently filtered columns such as `student_id`, `is_read`, and `created_at` to ensure efficient queries.
+
+---
+
+## Sample Query
+
+```sql
+SELECT * FROM notifications
+WHERE student_id = 1042
+AND is_read = false
+ORDER BY created_at DESC
+LIMIT 20;
+```
+
+This query fetches the 20 most recent unread notifications for a specific student, ordered by creation time in descending order.
