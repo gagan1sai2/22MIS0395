@@ -1,68 +1,40 @@
-import { useState, useEffect } from 'react'
-import './App.css'
+import { useState } from 'react';
+import { AppBar, Box, CssBaseline, Tab, Tabs, Toolbar, Typography } from '@mui/material';
+import AllNotifications from './pages/AllNotifications';
+import PriorityInbox from './pages/PriorityInbox';
+import './App.css';
 
 function App() {
-  const [notifications, setNotifications] = useState([])
-  const [title, setTitle] = useState('')
-
-  async function fetchNotifications() {
-    try {
-      const response = await fetch('http://localhost:3000/notifications')
-      const data = await response.json()
-      setNotifications(data)
-    } catch (error) {
-      console.error('Failed to fetch notifications:', error)
-    }
-  }
-
-  async function addNotification() {
-    if (!title.trim()) {
-      return
-    }
-
-    try {
-      await fetch('http://localhost:3000/notifications', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ title }),
-      })
-
-      setTitle('')
-      fetchNotifications()
-    } catch (error) {
-      console.error('Failed to add notification:', error)
-    }
-  }
-
-  useEffect(() => {
-    fetchNotifications()
-  }, [])
+  const [activeTab, setActiveTab] = useState(0);
 
   return (
-    <div className="app">
-      <h1>Notification System</h1>
-      <div className="form-row">
-        <input
-          type="text"
-          value={title}
-          onChange={(event) => setTitle(event.target.value)}
-          placeholder="Enter notification title"
-        />
-        <button type="button" onClick={addNotification}>
-          Add
-        </button>
-      </div>
-      <div className="notifications-list">
-        {notifications.map((item) => (
-          <div key={item.id} className="notification-item">
-            {item.title}
-          </div>
-        ))}
-      </div>
-    </div>
-  )
+    <Box sx={{ minHeight: '100vh', backgroundColor: 'background.default' }}>
+      <CssBaseline />
+      <AppBar position="sticky" elevation={0} color="default">
+        <Toolbar sx={{ flexDirection: 'column', alignItems: 'stretch', py: 1.5 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+            <Typography variant="h5" component="div" sx={{ fontWeight: 800 }}>
+              Notification Center
+            </Typography>
+          </Box>
+          <Tabs
+            value={activeTab}
+            onChange={(_, value) => setActiveTab(value)}
+            textColor="primary"
+            indicatorColor="primary"
+            variant="fullWidth"
+          >
+            <Tab label="All Notifications" />
+            <Tab label="Priority Inbox" />
+          </Tabs>
+        </Toolbar>
+      </AppBar>
+
+      <Box component="main">
+        {activeTab === 0 ? <AllNotifications /> : <PriorityInbox />}
+      </Box>
+    </Box>
+  );
 }
 
-export default App
+export default App;
