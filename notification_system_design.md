@@ -201,3 +201,86 @@ AND createdAt >= NOW() - INTERVAL '7 days';
 ```
 
 This query efficiently retrieves all placement notifications from the last 7 days. For best performance, an index should be created on `(notificationType, createdAt)` to optimize this frequently-used query.
+
+---
+
+## Performance Improvements
+
+### Problem
+Fetching all notifications on every page load causes repeated heavy database queries and increases server response time. This degrades user experience and wastes server resources.
+
+### Solution 1 — Redis Caching
+
+**How:** Cache the last N notifications per student in Redis.
+
+**Benefit:** 
+- Near-instant reads for cached data
+- Reduces database load significantly
+- Improves response time dramatically
+
+**Tradeoff:** 
+- Extra memory usage to store cache
+- Cache invalidation is needed whenever new notifications are created
+- Requires Redis infrastructure
+
+---
+
+### Solution 2 — Pagination
+
+**How:** Use `?page=1&limit=10` query parameters on all list endpoints.
+
+**Benefit:** 
+- Small, predictable database queries per request
+- Controlled memory usage regardless of dataset size
+- Better user experience with faster initial load
+
+**Tradeoff:** 
+- Requires multiple API calls to load more data
+- Users must navigate between pages explicitly
+
+---
+
+### Solution 3 — Lazy Loading
+
+**How:** Load older notifications only when user scrolls down.
+
+**Benefit:** 
+- Reduces initial page load time significantly
+- Better perceived performance
+- Reduces server load on first request
+
+**Tradeoff:** 
+- More API calls triggered by user interaction
+- Requires complex frontend logic to handle scroll events
+
+---
+
+### Solution 4 — WebSockets for Real-time Updates
+
+**How:** Push new notifications to clients over a persistent socket connection.
+
+**Benefit:** 
+- No polling needed; eliminates wasted requests
+- Instant notification delivery
+- Better user experience with real-time updates
+
+**Tradeoff:** 
+- Persistent connections consume server memory and resources
+- More complex backend architecture
+- Requires proper connection management and recovery
+
+---
+
+### Solution 5 — CDN for Static Assets
+
+**How:** Serve frontend JavaScript and CSS files from a CDN edge node.
+
+**Benefit:** 
+- Faster load times globally, especially for geographically distributed users
+- Reduces bandwidth usage on origin server
+- Improved page rendering speed
+
+**Tradeoff:** 
+- Cache invalidation required after deployments
+- Additional complexity in deployment pipeline
+- May require DNS configuration changes
