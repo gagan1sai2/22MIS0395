@@ -42,8 +42,14 @@ async function fetchAndRankNotifications(token) {
       }
     );
     
+    const notificationList = Array.isArray(response.data)
+      ? response.data
+      : Array.isArray(response.data?.data)
+        ? response.data.data
+        : [];
+
     // Add score to each notification
-    const notificationsWithScores = response.data.map(notification => ({
+    const notificationsWithScores = notificationList.map(notification => ({
       ...notification,
       score: calculateTotalScore(notification)
     }));
@@ -58,7 +64,7 @@ async function fetchAndRankNotifications(token) {
     return sortedNotifications.slice(0, 10);
   } catch (error) {
     // Log error
-    Log('backend', 'error', 'priorityInbox', `Failed to fetch notifications: ${error.message}`, token);
+    Log('backend', 'error', 'priorityInbox', 'Failed to fetch notifications', token);
     throw error;
   }
 }

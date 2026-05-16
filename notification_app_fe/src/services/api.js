@@ -1,9 +1,13 @@
 import { logEvent } from './logger';
 
 export const BASE_URL = 'http://4.224.186.213/evaluation-service';
-export const TOKEN = 'your_access_token_here';
+export const TOKEN = import.meta.env.VITE_API_TOKEN || '';
 
 function buildHeaders() {
+  if (!TOKEN) {
+    throw new Error('Missing VITE_API_TOKEN in frontend env configuration');
+  }
+
   return {
     Authorization: `Bearer ${TOKEN}`,
   };
