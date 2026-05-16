@@ -156,3 +156,48 @@ LIMIT 20;
 ```
 
 This query fetches the 20 most recent unread notifications for a specific student, ordered by creation time in descending order.
+
+---
+
+## Query Optimization
+
+### Problem Query
+
+```sql
+SELECT * FROM notifications
+WHERE studentID = 1042
+AND isRead = false
+ORDER BY createdAt ASC;
+```
+
+**Problem:** This query causes a full table scan. With millions of rows, this query becomes extremely slow because there is no index on `studentID`, `isRead`, or `createdAt`. The database engine must examine every single row to find matches, leading to significant performance degradation.
+
+### Solution — Composite Index
+
+```sql
+CREATE INDEX idx_notifications_student_read_created
+ON notifications(studentID, isRead, createdAt);
+```
+
+**Why this works:** The composite index covers all three columns used in the WHERE and ORDER BY clauses. This allows the database engine to skip the full table scan entirely and instead navigate directly to the matching rows through the index, resulting in orders of magnitude faster query execution.
+
+---
+
+## Why Not Index Everything?
+
+- **Each index slows down INSERT and UPDATE operations.** Every time data is modified, all indexes must also be updated, adding overhead.
+- **Indexes consume additional disk storage.** Large indexes on big tables can consume significant disk space.
+- **Only index columns used frequently in WHERE or ORDER BY clauses.** Unnecessary indexes provide no benefit and only add cost.
+
+---
+
+## Placement-Specific Query
+
+```sql
+SELECT *
+FROM notifications
+WHERE notificationType = 'Placement'
+AND createdAt >= NOW() - INTERVAL '7 days';
+```
+
+This query efficiently retrieves all placement notifications from the last 7 days. For best performance, an index should be created on `(notificationType, createdAt)` to optimize this frequently-used query.
